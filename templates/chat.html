@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical AI Chatbot</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <header>
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                <i class="fa-solid fa-stethoscope"></i>
+            </div>
+
+            <div>
+                <h2>Medical AI Chatbot</h2>
+                <p>Your AI Healthcare Assistant</p>
+            </div>
+
+        </div>
+
+        <div class="header-buttons">
+
+            <button id="clearChat" class="icon-btn">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+
+            <button id="themeToggle" class="icon-btn">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+
+        </div>
+
+    </header>
+
+    <!-- Suggested Questions -->
+
+    <div class="suggestions">
+
+        <button class="suggestion">
+            What is Diabetes?
+        </button>
+
+        <button class="suggestion">
+            What is Acne?
+        </button>
+
+        <button class="suggestion">
+            Symptoms of Asthma
+        </button>
+
+        <button class="suggestion">
+            Hypertension treatment
+        </button>
+
+    </div>
+
+    <!-- Chat -->
+
+    <div id="chatBox" class="chat-box">
+
+        <div class="bot-message">
+
+            <div class="avatar bot">
+                <i class="fa-solid fa-user-doctor"></i>
+            </div>
+
+            <div class="message">
+
+                👋 Hello!
+
+                <br><br>
+
+                I'm your Medical AI Assistant.
+
+                <br>
+
+                Ask me anything related to medicine, diseases,
+                symptoms or treatments.
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Typing -->
+
+    <div id="typing" class="typing hidden">
+
+        <span></span>
+        <span></span>
+        <span></span>
+
+    </div>
+
+    <!-- Input -->
+
+    <form id="chatForm">
+
+        <input
+                id="message"
+                type="text"
+                placeholder="Ask a medical question..."
+                autocomplete="off"
+                required
+        >
+
+        <button type="submit">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+
+    </form>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
