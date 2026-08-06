@@ -56,21 +56,23 @@ $(document).ready(function () {
     // -----------------------------
     function addBotMessage(message) {
 
-        chatBox.html(`
+    chatBox.append(`
         <div class="bot-message">
+
             <div class="avatar bot">
                 <i class="fa-solid fa-user-doctor"></i>
             </div>
 
             <div class="message">
-            👋 <strong>Hello!</strong><br><br>
-            I'm your Medical AI Assistant.<br>
-            Ask me anything related to medicine, diseases, symptoms or treatments.
+                ${message}
+                <br>
+                <small>${getTime()}</small>
             </div>
-        </div>
-`       );
 
-        scrollBottom();
+        </div>
+    `);
+
+    scrollBottom();
     }
 
     // -----------------------------
