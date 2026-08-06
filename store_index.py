@@ -34,9 +34,10 @@ if not pc.has_index(index_name):
             region="us-east-1"
         ),
     )
+    
 
 # Load and process PDF
-extracted_data = load_pdf("data/")
+extracted_data = load_pdf("data/data.pdf")
 filtered_data = filter_metadata(extracted_data)
 text_chunks = text_split(filtered_data)
 
