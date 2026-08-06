@@ -37,17 +37,27 @@
 
         <div class="header-buttons">
 
-            <button id="clearChat" class="icon-btn">
+            <button id="clearChat" class="icon-btn" title="Clear Chat">
                 <i class="fa-solid fa-trash"></i>
             </button>
 
-            <button id="themeToggle" class="icon-btn">
+            <button id="themeToggle" class="icon-btn" title="Toggle Theme">
                 <i class="fa-solid fa-moon"></i>
             </button>
 
         </div>
 
     </header>
+
+    <!-- Medical Disclaimer -->
+
+    <div class="disclaimer">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>
+            This AI assistant is for educational purposes only and should not replace
+            professional medical advice, diagnosis, or treatment.
+        </span>
+    </div>
 
     <!-- Suggested Questions -->
 
@@ -83,7 +93,7 @@
 
             <div class="message">
 
-                👋 Hello!
+                👋 <strong>Hello!</strong>
 
                 <br><br>
 
@@ -100,13 +110,15 @@
 
     </div>
 
-    <!-- Typing -->
+    <!-- Loading / Typing Indicator -->
 
     <div id="typing" class="typing hidden">
 
-        <span></span>
-        <span></span>
-        <span></span>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+
+        <span class="typing-text">Thinking...</span>
 
     </div>
 
@@ -115,11 +127,11 @@
     <form id="chatForm">
 
         <input
-                id="message"
-                type="text"
-                placeholder="Ask a medical question..."
-                autocomplete="off"
-                required
+            id="message"
+            type="text"
+            placeholder="Ask a medical question..."
+            autocomplete="off"
+            required
         >
 
         <button type="submit">
