@@ -1,6 +1,7 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+import os
 
 
 def load_pdf(data):
@@ -14,6 +15,7 @@ def filter_metadata(docs):
             "source": doc.metadata.get("source"),
             "page": doc.metadata.get("page")
         }
+
     return docs
 
 
@@ -22,10 +24,13 @@ def text_split(docs):
         chunk_size=1000,
         chunk_overlap=200
     )
+
     return splitter.split_documents(docs)
 
 
 def download_embeddings():
-    return HuggingFaceEmbeddings(
+
+    return HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.environ.get("HF_TOKEN"),
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
