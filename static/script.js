@@ -8,36 +8,116 @@ $(document).ready(function () {
 
     let isLoading = false;
 
-    // -----------------------------
-    // Auto Scroll
-    // -----------------------------
+
+    /* =====================================================
+       AUTO SCROLL
+       ===================================================== */
+
     function scrollBottom() {
-        chatBox.stop().animate({
-            scrollTop: chatBox[0].scrollHeight
-        }, 300);
+
+        if (!chatBox.length) return;
+
+        chatBox.stop().animate(
+            {
+                scrollTop: chatBox[0].scrollHeight
+            },
+            250
+        );
     }
 
-    // -----------------------------
-    // Current Time
-    // -----------------------------
+
+    /* =====================================================
+       CURRENT TIME
+       ===================================================== */
+
     function getTime() {
+
         return new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit"
         });
     }
 
-    // -----------------------------
-    // User Message
-    // -----------------------------
+
+    /* =====================================================
+       ESCAPE HTML
+       ===================================================== */
+
+    function escapeHtml(text) {
+
+        return $("<div>")
+            .text(text)
+            .html();
+    }
+
+
+    /* =====================================================
+       FORMAT BOT RESPONSE
+       ===================================================== */
+
+    function formatBotResponse(text) {
+
+        if (!text) {
+            return "Sorry, I couldn't generate a response.";
+        }
+
+        let safeText = escapeHtml(text);
+
+        /*
+         * Convert markdown-style formatting
+         */
+
+        safeText = safeText.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+        );
+
+        safeText = safeText.replace(
+            /`([^`]+)`/g,
+            "<code>$1</code>"
+        );
+
+        /*
+         * Convert numbered lists
+         */
+
+        safeText = safeText.replace(
+            /(?:^|\n)(\d+)\.\s+(.*?)(?=\n|$)/g,
+            "<div class='response-list-item'><strong>$1.</strong> $2</div>"
+        );
+
+        /*
+         * Convert bullet points
+         */
+
+        safeText = safeText.replace(
+            /(?:^|\n)[-*]\s+(.*?)(?=\n|$)/g,
+            "<div class='response-list-item'>• $1</div>"
+        );
+
+        /*
+         * Convert line breaks
+         */
+
+        safeText = safeText.replace(/\n/g, "<br>");
+
+        return safeText;
+    }
+
+
+    /* =====================================================
+       USER MESSAGE
+       ===================================================== */
+
     function addUserMessage(message) {
+
+        const safeMessage = escapeHtml(message);
 
         chatBox.append(`
             <div class="user-message">
 
                 <div class="message">
-                    ${message}
-                    <br>
+                    ${safeMessage}
                     <small>${getTime()}</small>
                 </div>
 
@@ -51,38 +131,43 @@ $(document).ready(function () {
         scrollBottom();
     }
 
-    // -----------------------------
-    // Bot Message
-    // -----------------------------
+
+    /* =====================================================
+       BOT MESSAGE
+       ===================================================== */
+
     function addBotMessage(message) {
 
-    chatBox.append(`
-        <div class="bot-message">
+        const formattedMessage = formatBotResponse(message);
 
-            <div class="avatar bot">
-                <i class="fa-solid fa-user-doctor"></i>
+        chatBox.append(`
+            <div class="bot-message">
+
+                <div class="avatar bot">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+
+                <div class="message">
+                    ${formattedMessage}
+                    <small>${getTime()}</small>
+                </div>
+
             </div>
+        `);
 
-            <div class="message">
-                ${message}
-                <br>
-                <small>${getTime()}</small>
-            </div>
-
-        </div>
-    `);
-
-    scrollBottom();
+        scrollBottom();
     }
 
-    // -----------------------------
-    // Loading State
-    // -----------------------------
+
+    /* =====================================================
+       LOADING STATE
+       ===================================================== */
+
     function setLoading(state) {
 
         isLoading = state;
 
-        if(state){
+        if (state) {
 
             typing.removeClass("hidden");
 
@@ -90,7 +175,7 @@ $(document).ready(function () {
 
             sendBtn.prop("disabled", true);
 
-        }else{
+        } else {
 
             typing.addClass("hidden");
 
@@ -99,23 +184,26 @@ $(document).ready(function () {
             sendBtn.prop("disabled", false);
 
             input.focus();
-
         }
 
         scrollBottom();
-
     }
 
-    // -----------------------------
-    // Send Message
-    // -----------------------------
-    function sendMessage(message){
 
-        if(isLoading) return;
+    /* =====================================================
+       SEND MESSAGE
+       ===================================================== */
+
+    function sendMessage(message) {
+
+        if (isLoading) return;
 
         message = message.trim();
 
-        if(message==="") return;
+        if (message === "") {
+            input.focus();
+            return;
+        }
 
         addUserMessage(message);
 
@@ -123,17 +211,18 @@ $(document).ready(function () {
 
         setLoading(true);
 
+
         $.ajax({
 
-            url:"/get",
+            url: "/get",
 
-            type:"POST",
+            type: "POST",
 
-            data:{
-                msg:message
+            data: {
+                msg: message
             },
 
-            success:function(response){
+            success: function (response) {
 
                 setLoading(false);
 
@@ -141,26 +230,40 @@ $(document).ready(function () {
 
             },
 
-            error:function(xhr){
+            error: function (xhr) {
 
                 setLoading(false);
 
-                addBotMessage(
-                    "⚠️ Unable to generate a response. Please try again."
-                );
+                let errorMessage =
+                    "⚠️ Unable to generate a response. Please try again.";
 
-                console.error(xhr);
+                /*
+                 * If Flask returned a useful message,
+                 * display it.
+                 */
 
+                if (
+                    xhr.responseText &&
+                    xhr.responseText.trim() !== ""
+                ) {
+                    console.error(
+                        "Server response:",
+                        xhr.responseText
+                    );
+                }
+
+                addBotMessage(errorMessage);
             }
 
         });
-
     }
 
-    // -----------------------------
-    // Form Submit
-    // -----------------------------
-    form.on("submit",function(e){
+
+    /* =====================================================
+       FORM SUBMIT
+       ===================================================== */
+
+    form.on("submit", function (e) {
 
         e.preventDefault();
 
@@ -168,39 +271,55 @@ $(document).ready(function () {
 
     });
 
-    // -----------------------------
-    // Press Enter to Send
-    // -----------------------------
-    input.on("keydown",function(e){
 
-        if(e.key==="Enter"){
+    /* =====================================================
+       ENTER TO SEND
+       ===================================================== */
+
+    input.on("keydown", function (e) {
+
+        /*
+         * Enter = send
+         *
+         * Shift + Enter = new line
+         */
+
+        if (e.key === "Enter" && !e.shiftKey) {
 
             e.preventDefault();
 
-            form.submit();
-
+            form.trigger("submit");
         }
 
     });
 
-    // -----------------------------
-    // Suggested Questions
-    // -----------------------------
-    $(".suggestion").click(function(){
 
-        sendMessage($(this).text().trim());
+    /* =====================================================
+       SUGGESTED QUESTIONS
+       ===================================================== */
+
+    $(".suggestion").on("click", function () {
+
+        const question = $(this).text().trim();
+
+        if (!isLoading) {
+            sendMessage(question);
+        }
 
     });
 
-    // -----------------------------
-    // Clear Chat
-    // -----------------------------
-    $("#clearChat").click(function(){
 
-        if(!confirm("Clear the conversation?")) return;
+    /* =====================================================
+       CLEAR CHAT
+       ===================================================== */
+
+    $("#clearChat").on("click", function () {
+
+        if (!confirm("Clear the conversation?")) {
+            return;
+        }
 
         chatBox.html(`
-
             <div class="bot-message">
 
                 <div class="avatar bot">
@@ -215,63 +334,86 @@ $(document).ready(function () {
 
                     I'm your Medical AI Assistant.
 
-                    <br>
+                    <br><br>
 
-                    Ask me anything related to medicine, diseases,
-                    symptoms or treatments.
+                    Ask me anything related to
+                    medicine, diseases, symptoms,
+                    or treatments.
+
+                    <small>${getTime()}</small>
 
                 </div>
 
             </div>
-
         `);
+
+        input.val("");
 
         input.focus();
 
+        scrollBottom();
     });
 
-    // -----------------------------
-    // Theme Toggle
-    // -----------------------------
+
+    /* =====================================================
+       THEME TOGGLE
+       ===================================================== */
+
     const body = $("body");
 
-    if(localStorage.getItem("theme")==="dark"){
+    const themeToggle = $("#themeToggle");
+
+    const themeIcon = $("#themeToggle i");
+
+
+    /*
+     * Load saved theme
+     */
+
+    if (localStorage.getItem("theme") === "dark") {
 
         body.addClass("dark");
 
-        $("#themeToggle i")
+        themeIcon
             .removeClass("fa-moon")
             .addClass("fa-sun");
-
     }
 
-    $("#themeToggle").click(function(){
+
+    /*
+     * Toggle theme
+     */
+
+    themeToggle.on("click", function () {
 
         body.toggleClass("dark");
 
-        const icon=$("#themeToggle i");
+        if (body.hasClass("dark")) {
 
-        if(body.hasClass("dark")){
+            localStorage.setItem("theme", "dark");
 
-            localStorage.setItem("theme","dark");
-
-            icon.removeClass("fa-moon")
+            themeIcon
+                .removeClass("fa-moon")
                 .addClass("fa-sun");
 
-        }else{
+        } else {
 
-            localStorage.setItem("theme","light");
+            localStorage.setItem("theme", "light");
 
-            icon.removeClass("fa-sun")
+            themeIcon
+                .removeClass("fa-sun")
                 .addClass("fa-moon");
-
         }
 
     });
 
-    // -----------------------------
-    // Initial Focus
-    // -----------------------------
+
+    /* =====================================================
+       INITIAL FOCUS
+       ===================================================== */
+
     input.focus();
+
+    scrollBottom();
 
 });
