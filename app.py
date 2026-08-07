@@ -1,4 +1,8 @@
+import os
+
 from flask import Flask, render_template, request
+
+from dotenv import load_dotenv
 
 from src.helper import download_embeddings
 
@@ -9,7 +13,9 @@ from langchain_huggingface import (
     HuggingFaceEndpoint
 )
 
-from langchain_classic.chains import create_retrieval_chain
+from langchain_classic.chains import (
+    create_retrieval_chain
+)
 
 from langchain_classic.chains.combine_documents import (
     create_stuff_documents_chain
@@ -17,15 +23,12 @@ from langchain_classic.chains.combine_documents import (
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from dotenv import load_dotenv
-
-from src.prompt import *
-
-import os
+from src.prompt import system_prompt
 
 
-app = Flask(__name__)
-
+# ============================================================
+# ENVIRONMENT
+# ============================================================
 
 load_dotenv()
 
@@ -33,8 +36,23 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 
+# ============================================================
+# FLASK
+# ============================================================
+
+app = Flask(__name__)
+
+
+# ============================================================
+# EMBEDDINGS
+# ============================================================
+
 embeddings = download_embeddings()
 
+
+# ============================================================
+# PINECONE
+# ============================================================
 
 index_name = "medical-chatbot"
 
@@ -52,12 +70,16 @@ retriever = docsearch.as_retriever(
 )
 
 
+# ============================================================
+# HUGGING FACE LLM
+# ============================================================
+
 llm = HuggingFaceEndpoint(
     repo_id="Qwen/Qwen2.5-7B-Instruct",
     task="text-generation",
     huggingfacehub_api_token=HF_TOKEN,
-    max_new_tokens=512,
-    temperature=0.2,
+    max_new_tokens=256,
+    temperature=0.2
 )
 
 
@@ -66,18 +88,27 @@ chatModel = ChatHuggingFace(
 )
 
 
+# ============================================================
+# PROMPT
+# ============================================================
+
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system_prompt),
-        ("human", "{input}"),
+        ("human", "{input}")
     ]
 )
 
+
+# ============================================================
+# RAG CHAIN
+# ============================================================
 
 question_answer_chain = create_stuff_documents_chain(
     chatModel,
     prompt
 )
+
 
 rag_chain = create_retrieval_chain(
     retriever,
@@ -85,6 +116,9 @@ rag_chain = create_retrieval_chain(
 )
 
 
+# ============================================================
+# HOME PAGE
+# ============================================================
 
 @app.route("/")
 def index():
@@ -92,6 +126,9 @@ def index():
     return render_template("chat.html")
 
 
+# ============================================================
+# CHAT API
+# ============================================================
 
 @app.route("/get", methods=["POST"])
 def chat():
@@ -99,6 +136,7 @@ def chat():
     msg = request.form.get("msg", "").strip()
 
     if not msg:
+
         return "Please enter a question.", 400
 
     try:
@@ -109,11 +147,16 @@ def chat():
             }
         )
 
-        return response["answer"]
+        answer = response.get(
+            "answer",
+            "Sorry, I could not generate an answer."
+        )
+
+        return answer
 
     except Exception as e:
 
-        print("ERROR:", e)
+        print("ERROR:", repr(e))
 
         return (
             "Sorry, I was unable to generate a response. "
@@ -121,6 +164,9 @@ def chat():
         ), 500
 
 
+# ============================================================
+# RUN
+# ============================================================
 
 if __name__ == "__main__":
 
