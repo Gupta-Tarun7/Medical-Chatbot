@@ -1,21 +1,15 @@
 import os
 
 from flask import Flask, render_template, request
-
 from dotenv import load_dotenv
 
 from src.helper import download_embeddings
 
 from langchain_pinecone import PineconeVectorStore
 
-from langchain_huggingface import (
-    ChatHuggingFace,
-    HuggingFaceEndpoint
-)
+from langchain_groq import ChatGroq
 
-from langchain_classic.chains import (
-    create_retrieval_chain
-)
+from langchain_classic.chains import create_retrieval_chain
 
 from langchain_classic.chains.combine_documents import (
     create_stuff_documents_chain
@@ -25,15 +19,12 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from src.prompt import system_prompt
 
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
+import traceback
 
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 # ============================================================
@@ -71,20 +62,13 @@ retriever = docsearch.as_retriever(
 
 
 # ============================================================
-# HUGGING FACE LLM
+# GROQ LLM
 # ============================================================
 
-llm = HuggingFaceEndpoint(
-    repo_id="Qwen/Qwen2.5-7B-Instruct",
-    task="text-generation",
-    huggingfacehub_api_token=HF_TOKEN,
-    max_new_tokens=256,
-    temperature=0.2
-)
-
-
-chatModel = ChatHuggingFace(
-    llm=llm
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0.2,
+    max_tokens=1024
 )
 
 
@@ -105,10 +89,9 @@ prompt = ChatPromptTemplate.from_messages(
 # ============================================================
 
 question_answer_chain = create_stuff_documents_chain(
-    chatModel,
+    llm,
     prompt
 )
-
 
 rag_chain = create_retrieval_chain(
     retriever,
@@ -122,7 +105,6 @@ rag_chain = create_retrieval_chain(
 
 @app.route("/")
 def index():
-
     return render_template("chat.html")
 
 
@@ -136,16 +118,24 @@ def chat():
     msg = request.form.get("msg", "").strip()
 
     if not msg:
-
         return "Please enter a question.", 400
 
     try:
+
+        print("\n========================================")
+        print("USER QUESTION:")
+        print(msg)
 
         response = rag_chain.invoke(
             {
                 "input": msg
             }
         )
+
+        print("\nRETRIEVED ANSWER:")
+        print(response.get("answer"))
+
+        print("\n========================================")
 
         answer = response.get(
             "answer",
@@ -156,12 +146,13 @@ def chat():
 
     except Exception as e:
 
-        print("ERROR:", repr(e))
+        import traceback
 
-        return (
-            "Sorry, I was unable to generate a response. "
-            "Please try again later."
-        ), 500
+        print("\n========== ERROR ==========")
+        traceback.print_exc()
+        print("===========================\n")
+
+        return "Sorry, I was unable to generate a response.", 500
 
 
 # ============================================================

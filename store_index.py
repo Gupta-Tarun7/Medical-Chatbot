@@ -12,13 +12,12 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
 
 
-# Load environment variables
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Initialize Pinecone
+
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 index_name = "medical-chatbot"
@@ -36,15 +35,12 @@ if not pc.has_index(index_name):
     )
     
 
-# Load and process PDF
 extracted_data = load_pdf("data/data.pdf")
 filtered_data = filter_metadata(extracted_data)
 text_chunks = text_split(filtered_data)
 
-# Load embedding model
 embedding = download_embeddings()
 
-# Upload vectors
 docsearch = PineconeVectorStore.from_documents(
     documents=text_chunks,
     embedding=embedding,

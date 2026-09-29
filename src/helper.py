@@ -1,27 +1,20 @@
 import os
 
 from dotenv import load_dotenv
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.embeddings import Embeddings
-from huggingface_hub import InferenceClient
 
+from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
-
-# ============================================================
-# PDF LOADING
-# ============================================================
-
 def load_pdf(data):
+
     loader = PyPDFLoader(data)
+
     return loader.load()
-
-
-# ============================================================
-# METADATA FILTERING
-# ============================================================
 
 def filter_metadata(docs):
 
@@ -34,11 +27,6 @@ def filter_metadata(docs):
 
     return docs
 
-
-# ============================================================
-# TEXT SPLITTING
-# ============================================================
-
 def text_split(docs):
 
     splitter = RecursiveCharacterTextSplitter(
@@ -48,12 +36,7 @@ def text_split(docs):
 
     return splitter.split_documents(docs)
 
-
-# ============================================================
-# HUGGING FACE INFERENCE EMBEDDINGS
-# ============================================================
-
-class HuggingFaceEmbeddingsAPI(Embeddings):
+class LocalEmbeddings(Embeddings):
 
     def __init__(
         self,
@@ -62,64 +45,32 @@ class HuggingFaceEmbeddingsAPI(Embeddings):
 
         self.model_name = model_name
 
-        token = os.getenv("HF_TOKEN")
-
-        if not token:
-            raise ValueError(
-                "HF_TOKEN environment variable is not set."
-            )
-
-        self.client = InferenceClient(
-            provider="hf-inference",
-            api_key=token
+        self.model = SentenceTransformer(
+            model_name
         )
+
 
     def embed_documents(self, texts):
 
-        embeddings = []
+        embeddings = self.model.encode(
+            texts,
+            normalize_embeddings=True
+        )
 
-        for text in texts:
+        return embeddings.tolist()
 
-            result = self.client.feature_extraction(
-                text,
-                model=self.model_name
-            )
-
-            # Convert numpy array to a normal Python list
-            if hasattr(result, "tolist"):
-                result = result.tolist()
-
-            # all-MiniLM-L6-v2 can return shape:
-            # (1, 384) or (384,)
-            if isinstance(result[0], list):
-                result = result[0]
-
-            embeddings.append(result)
-
-        return embeddings
 
     def embed_query(self, text):
 
-        result = self.client.feature_extraction(
+        embedding = self.model.encode(
             text,
-            model=self.model_name
+            normalize_embeddings=True
         )
 
-        if hasattr(result, "tolist"):
-            result = result.tolist()
-
-        if isinstance(result[0], list):
-            result = result[0]
-
-        return result
-
-
-# ============================================================
-# EMBEDDING FACTORY
-# ============================================================
+        return embedding.tolist()
 
 def download_embeddings():
 
-    return HuggingFaceEmbeddingsAPI(
+    return LocalEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )

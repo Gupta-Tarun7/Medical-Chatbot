@@ -6,12 +6,7 @@ $(document).ready(function () {
     const form = $("#chatForm");
     const sendBtn = $("#chatForm button");
 
-    let isLoading = false;
-
-
-    /* =====================================================
-       AUTO SCROLL
-       ===================================================== */
+    let isLoading = false;       
 
     function scrollBottom() {
 
@@ -26,9 +21,7 @@ $(document).ready(function () {
     }
 
 
-    /* =====================================================
-       CURRENT TIME
-       ===================================================== */
+       // CURRENT TIME
 
     function getTime() {
 
@@ -39,9 +32,7 @@ $(document).ready(function () {
     }
 
 
-    /* =====================================================
-       ESCAPE HTML
-       ===================================================== */
+       // ESCAPE HTML
 
     function escapeHtml(text) {
 
@@ -51,9 +42,7 @@ $(document).ready(function () {
     }
 
 
-    /* =====================================================
-       FORMAT BOT RESPONSE
-       ===================================================== */
+       //FORMAT BOT RESPONSE
 
     function formatBotResponse(text) {
 
@@ -63,51 +52,37 @@ $(document).ready(function () {
 
         let safeText = escapeHtml(text);
 
-        /*
-         * Convert markdown-style formatting
-         */
-
+        // Convert bold Markdown
         safeText = safeText.replace(
             /\*\*(.*?)\*\*/g,
             "<strong>$1</strong>"
         );
 
+        // Convert inline code
         safeText = safeText.replace(
             /`([^`]+)`/g,
             "<code>$1</code>"
         );
 
-        /*
-         * Convert numbered lists
-         */
-
+        // Convert bullet points
         safeText = safeText.replace(
-            /(?:^|\n)(\d+)\.\s+(.*?)(?=\n|$)/g,
-            "<div class='response-list-item'><strong>$1.</strong> $2</div>"
+            /(^|\n)[-*]\s+(.*)/g,
+            "$1<div class='response-list-item'>• $2</div>"
         );
 
-        /*
-         * Convert bullet points
-         */
-
+        // Convert numbered lists
         safeText = safeText.replace(
-            /(?:^|\n)[-*]\s+(.*?)(?=\n|$)/g,
-            "<div class='response-list-item'>• $1</div>"
+            /(^|\n)(\d+)\.\s+(.*)/g,
+            "$1<div class='response-list-item'><strong>$2.</strong> $3</div>"
         );
 
-        /*
-         * Convert line breaks
-         */
-
+        // Convert new lines
         safeText = safeText.replace(/\n/g, "<br>");
 
         return safeText;
     }
 
-
-    /* =====================================================
-       USER MESSAGE
-       ===================================================== */
+       // USER MESSAGE
 
     function addUserMessage(message) {
 
@@ -131,10 +106,7 @@ $(document).ready(function () {
         scrollBottom();
     }
 
-
-    /* =====================================================
-       BOT MESSAGE
-       ===================================================== */
+       // BOT MESSAGE
 
     function addBotMessage(message) {
 
@@ -158,10 +130,7 @@ $(document).ready(function () {
         scrollBottom();
     }
 
-
-    /* =====================================================
-       LOADING STATE
-       ===================================================== */
+       // LOADING STATE
 
     function setLoading(state) {
 
@@ -189,10 +158,7 @@ $(document).ready(function () {
         scrollBottom();
     }
 
-
-    /* =====================================================
-       SEND MESSAGE
-       ===================================================== */
+       // SEND MESSAGE
 
     function sendMessage(message) {
 
@@ -258,10 +224,7 @@ $(document).ready(function () {
         });
     }
 
-
-    /* =====================================================
-       FORM SUBMIT
-       ===================================================== */
+       // FORM SUBMIT
 
     form.on("submit", function (e) {
 
@@ -271,10 +234,7 @@ $(document).ready(function () {
 
     });
 
-
-    /* =====================================================
-       ENTER TO SEND
-       ===================================================== */
+       // ENTER TO SEND
 
     input.on("keydown", function (e) {
 
@@ -293,10 +253,7 @@ $(document).ready(function () {
 
     });
 
-
-    /* =====================================================
-       SUGGESTED QUESTIONS
-       ===================================================== */
+       // SUGGESTED QUESTIONS
 
     $(".suggestion").on("click", function () {
 
@@ -308,10 +265,7 @@ $(document).ready(function () {
 
     });
 
-
-    /* =====================================================
-       CLEAR CHAT
-       ===================================================== */
+       // CLEAR CHAT
 
     $("#clearChat").on("click", function () {
 
@@ -354,10 +308,7 @@ $(document).ready(function () {
         scrollBottom();
     });
 
-
-    /* =====================================================
-       THEME TOGGLE
-       ===================================================== */
+       // THEME TOGGLE
 
     const body = $("body");
 
@@ -365,10 +316,7 @@ $(document).ready(function () {
 
     const themeIcon = $("#themeToggle i");
 
-
-    /*
-     * Load saved theme
-     */
+     // Load saved theme
 
     if (localStorage.getItem("theme") === "dark") {
 
@@ -379,10 +327,7 @@ $(document).ready(function () {
             .addClass("fa-sun");
     }
 
-
-    /*
-     * Toggle theme
-     */
+     //Toggle theme
 
     themeToggle.on("click", function () {
 
@@ -407,10 +352,7 @@ $(document).ready(function () {
 
     });
 
-
-    /* =====================================================
-       INITIAL FOCUS
-       ===================================================== */
+       // INITIAL FOCUS
 
     input.focus();
 

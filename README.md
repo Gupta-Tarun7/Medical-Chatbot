@@ -1,8 +1,8 @@
-# 🩺 Medical Chatbot using LangChain, Flask & Pinecone
+# 🩺 Medical Chatbot using LangChain, Flask, Groq & Pinecone
 
-A Retrieval-Augmented Generation (RAG) based Medical Chatbot built using **LangChain**, **Flask**, **Pinecone**, and **Hugging Face**.
+A Retrieval-Augmented Generation (RAG) based Medical Chatbot built using **LangChain**, **Flask**, **Groq**, **Pinecone**, and **Hugging Face embeddings**.
 
-The chatbot retrieves relevant information from medical documents stored in a Pinecone vector database and uses a Hugging Face language model to generate responses.
+The chatbot retrieves relevant information from medical documents stored in a Pinecone vector database and uses a Groq-hosted language model to generate responses based on the retrieved context.
 
 > ⚠️ **Medical Disclaimer:** This chatbot is intended for educational and informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment.
 
@@ -10,19 +10,20 @@ The chatbot retrieves relevant information from medical documents stored in a Pi
 
 ## 🚀 Features
 
-- 🩺 Medical Question Answering
-- 🔎 Retrieval-Augmented Generation (RAG)
-- 📚 PDF document-based knowledge retrieval
-- 🧠 LangChain integration
-- 🌲 Pinecone vector database
-- 🤗 Hugging Face embeddings
-- 💬 Interactive chat interface
-- 🌙 Dark mode
-- 🗑️ Clear chat functionality
-- 📱 Responsive web interface
-- ⚡ Flask backend
-- 🚀 Gunicorn production server
-- ☁️ Render deployment
+* 🩺 Medical Question Answering
+* 🔎 Retrieval-Augmented Generation (RAG)
+* 📚 PDF document-based knowledge retrieval
+* 🧠 LangChain integration
+* 🌲 Pinecone vector database
+* 🤗 Hugging Face `all-MiniLM-L6-v2` embeddings
+* ⚡ Groq LLM inference
+* 💬 Interactive chat interface
+* 🌙 Dark mode
+* 🗑️ Clear chat functionality
+* 📱 Responsive web interface
+* ⚡ Flask backend
+* 🚀 Gunicorn production server
+* ☁️ Render deployment
 
 ---
 
@@ -30,30 +31,33 @@ The chatbot retrieves relevant information from medical documents stored in a Pi
 
 ### Backend
 
-- Python
-- Flask
-- Gunicorn
-- LangChain
+* Python
+* Flask
+* Gunicorn
+* LangChain
 
 ### AI / RAG
 
-- Hugging Face
-- Sentence Transformers
-- Pinecone
-- Retrieval-Augmented Generation
+* LangChain
+* Groq
+* `openai/gpt-oss-20b`
+* Hugging Face Sentence Transformers
+* `sentence-transformers/all-MiniLM-L6-v2`
+* Pinecone
+* Retrieval-Augmented Generation
 
 ### Frontend
 
-- HTML
-- CSS
-- JavaScript
-- jQuery
-- Font Awesome
+* HTML
+* CSS
+* JavaScript
+* jQuery
+* Font Awesome
 
 ### Deployment
 
-- GitHub
-- Render
+* GitHub
+* Render
 
 ---
 
@@ -61,6 +65,7 @@ The chatbot retrieves relevant information from medical documents stored in a Pi
 
 ```text
 Medical-Chatbot/
+
 │
 ├── data/
 │   └── data.pdf
@@ -96,32 +101,38 @@ Medical-Chatbot/
 The chatbot uses a Retrieval-Augmented Generation pipeline.
 
 ```text
-                  User Question
-                       │
-                       ▼
-                 Flask Web App
-                       │
-                       ▼
-                Query Processing
-                       │
-                       ▼
-              Embedding Generation
-                       │
-                       ▼
-              Pinecone Vector Search
-                       │
-                       ▼
+                    User Question
+                          │
+                          ▼
+                   Flask Web App
+                          │
+                          ▼
+                 Query Embedding
+                          │
+                          ▼
+                 Pinecone Search
+                          │
+                          ▼
              Relevant Medical Documents
-                       │
-                       ▼
-                Hugging Face LLM
-                       │
-                       ▼
-                Generated Answer
-                       │
-                       ▼
-                 Chat Interface
+                          │
+                          ▼
+                  Retrieved Context
+                          │
+                          ▼
+                    Groq LLM
+                          │
+                          ▼
+                  Generated Answer
+                          │
+                          ▼
+                   Chat Interface
 ```
+
+The application separates **knowledge retrieval** from **answer generation**:
+
+* Hugging Face `all-MiniLM-L6-v2` converts text and questions into 384-dimensional embeddings.
+* Pinecone stores and searches those vectors.
+* Groq processes the retrieved medical context and generates the final response.
 
 ---
 
@@ -148,10 +159,38 @@ Text Chunks
 Hugging Face Embeddings
      │
      ▼
+384-Dimensional Vectors
+     │
+     ▼
 Pinecone Vector Database
 ```
 
-When a user asks a question, the system retrieves the most relevant document chunks from Pinecone and provides them to the language model to generate an answer.
+When a user asks a question:
+
+```text
+User Question
+      │
+      ▼
+all-MiniLM-L6-v2
+      │
+      ▼
+Query Vector
+      │
+      ▼
+Pinecone Similarity Search
+      │
+      ▼
+Top 3 Relevant Chunks
+      │
+      ▼
+Prompt + Retrieved Context
+      │
+      ▼
+Groq LLM
+      │
+      ▼
+Final Answer
+```
 
 ---
 
@@ -161,6 +200,7 @@ When a user asks a question, the system retrieves the most relevant document chu
 
 ```bash
 git clone https://github.com/Gupta-Tarun7/Medical-Chatbot.git
+
 cd Medical-Chatbot
 ```
 
@@ -184,7 +224,7 @@ conda activate genai
 
 ## Step 3 — Install Dependencies
 
-Install the required Python packages:
+Install the required packages:
 
 ```bash
 pip install -r requirements.txt
@@ -194,18 +234,27 @@ pip install -r requirements.txt
 
 # 🔐 Environment Variables
 
-Create a `.env` file in the root directory of the project.
+Create a `.env` file in the root directory:
 
 ```env
 PINECONE_API_KEY=your_pinecone_api_key
+GROQ_API_KEY=your_groq_api_key
 HF_TOKEN=your_huggingface_token
 ```
+
+### Why are these keys required?
+
+| Variable           | Purpose                                    |
+| ------------------ | ------------------------------------------ |
+| `PINECONE_API_KEY` | Connects to Pinecone vector database       |
+| `GROQ_API_KEY`     | Allows the application to use the Groq LLM |
+| `HF_TOKEN`         | Used for Hugging Face embedding inference  |
 
 Your project should look like:
 
 ```text
 Medical-Chatbot/
-│
+
 ├── .env
 ├── app.py
 ├── store_index.py
@@ -215,7 +264,7 @@ Medical-Chatbot/
 
 ### ⚠️ Important
 
-Never upload your `.env` file to GitHub.
+Never upload `.env` to GitHub.
 
 Your `.gitignore` should contain:
 
@@ -239,14 +288,26 @@ Run:
 python store_index.py
 ```
 
-This process will:
+The script will:
 
 1. Load the medical PDF.
 2. Extract text from the PDF.
-3. Split the text into smaller chunks.
-4. Generate embeddings using Hugging Face.
-5. Create the Pinecone index if it does not already exist.
-6. Upload the embeddings to Pinecone.
+3. Filter document metadata.
+4. Split the text into chunks.
+5. Generate embeddings using `all-MiniLM-L6-v2`.
+6. Create a Pinecone index if it does not already exist.
+7. Upload the vectors to Pinecone.
+
+The Pinecone index uses:
+
+```text
+Dimension: 384
+Metric: cosine
+Cloud: AWS
+Region: us-east-1
+```
+
+The dimension is `384` because `all-MiniLM-L6-v2` generates 384-dimensional embeddings.
 
 ---
 
@@ -268,11 +329,123 @@ Open the URL in your browser.
 
 ---
 
+# 🤖 Groq LLM
+
+The chatbot uses Groq for language-model inference.
+
+The current model configured in `app.py` is:
+
+```python
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0.2,
+    max_tokens=256
+)
+```
+
+Groq is responsible for generating the final answer after relevant medical information has been retrieved from Pinecone.
+
+---
+
+# 🔎 Vector Embeddings
+
+The project uses:
+
+```text
+sentence-transformers/all-MiniLM-L6-v2
+```
+
+for generating embeddings.
+
+The embedding size is:
+
+```text
+384 dimensions
+```
+
+These embeddings are used for both:
+
+* Medical document chunks
+* User queries
+
+Using the same embedding model for documents and queries ensures that they exist in the same vector space for similarity search.
+
+---
+
+# 🔄 RAG Workflow
+
+When a user asks a question, the application follows this workflow:
+
+```text
+                         User
+                          │
+                          ▼
+                  Flask Web Interface
+                          │
+                          ▼
+                    User Question
+                          │
+                          ▼
+             all-MiniLM-L6-v2 Embedding
+                          │
+                          ▼
+                  Pinecone Search
+                          │
+                          ▼
+               Top 3 Relevant Chunks
+                          │
+                          ▼
+             Prompt + Retrieved Context
+                          │
+                          ▼
+                    Groq LLM
+                          │
+                          ▼
+                  Generated Response
+                          │
+                          ▼
+                         User
+```
+
+---
+
+# 💬 Example Questions
+
+You can ask questions such as:
+
+```text
+What is diabetes?
+```
+
+```text
+What are the symptoms of asthma?
+```
+
+```text
+What causes acne?
+```
+
+```text
+What is hypertension?
+```
+
+```text
+What are the treatments for hypertension?
+```
+
+```text
+What are the symptoms of diabetes?
+```
+
+The chatbot answers using the information retrieved from the medical knowledge base.
+
+---
+
 # 🚀 Production Deployment
 
-For production deployment, the Flask application uses **Gunicorn**.
+For production deployment, the application uses **Gunicorn**.
 
-The production start command is:
+Run:
 
 ```bash
 gunicorn app:app
@@ -331,7 +504,7 @@ __pycache__/
 
 ## Step 2 — Create a Render Web Service
 
-Create a new **Web Service** on Render and connect your GitHub repository.
+Create a new Web Service on Render and connect your GitHub repository.
 
 Select:
 
@@ -341,7 +514,7 @@ Medical-Chatbot
 
 ---
 
-## Step 3 — Configure the Build Command
+## Step 3 — Configure Build Command
 
 Use:
 
@@ -351,7 +524,7 @@ pip install -r requirements.txt
 
 ---
 
-## Step 4 — Configure the Start Command
+## Step 4 — Configure Start Command
 
 Use:
 
@@ -363,26 +536,19 @@ gunicorn app:app
 
 ## Step 5 — Add Environment Variables
 
-In the Render **Environment Variables** section, add:
+Add the following environment variables in Render:
 
 ```text
 PINECONE_API_KEY
-```
-
-and provide your Pinecone API key.
-
-Add:
-
-```text
+GROQ_API_KEY
 HF_TOKEN
 ```
 
-and provide your Hugging Face token.
-
-Your Render environment variables should look like:
+For example:
 
 ```text
 PINECONE_API_KEY = your_pinecone_api_key
+GROQ_API_KEY     = your_groq_api_key
 HF_TOKEN         = your_huggingface_token
 ```
 
@@ -390,7 +556,7 @@ HF_TOKEN         = your_huggingface_token
 
 Do not put API keys directly inside Python files.
 
-Do not upload your `.env` file to GitHub.
+Do not upload `.env` to GitHub.
 
 ---
 
@@ -399,23 +565,26 @@ Do not upload your `.env` file to GitHub.
 The project uses the following major dependencies:
 
 ```text
-gunicorn
-langchain
-langchain-core
-langchain-community
-langchain-huggingface
-langchain-pinecone
-langchain-classic
-pinecone
-sentence-transformers
-transformers
-huggingface-hub
-python-dotenv
-pypdf
-flask
+Flask
+Gunicorn
+Python-dotenv
+
+LangChain
+LangChain Core
+LangChain Community
+LangChain Classic
+LangChain Pinecone
+LangChain Groq
+
+Pinecone
+Hugging Face Hub
+Sentence Transformers
+
+PyPDF
+LangChain Text Splitters
 ```
 
-The exact package versions are available in:
+The exact versions are available in:
 
 ```text
 requirements.txt
@@ -425,73 +594,6 @@ Install them using:
 
 ```bash
 pip install -r requirements.txt
-```
-
----
-
-# 💬 Example Questions
-
-You can ask questions such as:
-
-```text
-What is diabetes?
-```
-
-```text
-What are the symptoms of asthma?
-```
-
-```text
-What causes acne?
-```
-
-```text
-What is hypertension?
-```
-
-```text
-What are the treatments for hypertension?
-```
-
-```text
-What are the symptoms of diabetes?
-```
-
----
-
-# 🔄 RAG Workflow
-
-When a user asks a question, the application follows this workflow:
-
-```text
-User
- │
- ▼
-Flask Web Interface
- │
- ▼
-User Question
- │
- ▼
-Embedding Model
- │
- ▼
-Pinecone Vector Search
- │
- ▼
-Relevant Medical Documents
- │
- ▼
-Prompt + Retrieved Context
- │
- ▼
-Hugging Face Language Model
- │
- ▼
-Generated Response
- │
- ▼
-User
 ```
 
 ---
@@ -516,7 +618,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Create the Pinecone vector index:
+Create the Pinecone vector index and upload document embeddings:
 
 ```bash
 python store_index.py
@@ -528,7 +630,7 @@ Run the Flask application:
 python app.py
 ```
 
-Run the application using Gunicorn:
+For production-style local execution:
 
 ```bash
 gunicorn app:app
@@ -547,6 +649,7 @@ The following files and directories should not be committed:
 __pycache__/
 *.pyc
 .venv/
+.ipynb_checkpoints/
 ```
 
 Recommended `.gitignore`:
@@ -569,10 +672,11 @@ This chatbot is designed for educational and informational purposes only.
 
 It:
 
-- Does not provide professional medical diagnosis.
-- Does not replace a qualified healthcare professional.
-- Should not be used for emergency medical decisions.
-- May generate inaccurate, incomplete, or outdated information.
+* Does not provide professional medical diagnosis.
+* Does not replace a qualified healthcare professional.
+* Should not be used for emergency medical decisions.
+* May generate inaccurate, incomplete, or outdated information.
+* Should not be relied upon as the sole source for medical decisions.
 
 Always consult a qualified healthcare professional for diagnosis, treatment, and medical advice.
 
@@ -590,14 +694,36 @@ Run:
 python store_index.py
 ```
 
-before using the chatbot with a new Pinecone index.
+when setting up a new Pinecone index or knowledge base.
+
+### Groq
+
+A valid Groq API key must be configured:
+
+```text
+GROQ_API_KEY
+```
+
+The application currently uses:
+
+```text
+openai/gpt-oss-20b
+```
+
+for response generation.
 
 ### Hugging Face
 
-A valid Hugging Face token must be configured:
+A valid Hugging Face token is required for the embedding service:
 
 ```text
 HF_TOKEN
+```
+
+The embedding model is:
+
+```text
+sentence-transformers/all-MiniLM-L6-v2
 ```
 
 ### Pinecone API
@@ -627,30 +753,34 @@ python app.py
 # 🌐 Deployment Architecture
 
 ```text
-                    Internet
-                       │
-                       ▼
-                    Render
-                       │
-                       ▼
-                 Gunicorn
-                       │
-                       ▼
-                   Flask
-                       │
-              ┌────────┴────────┐
-              │                 │
-              ▼                 ▼
-        Hugging Face         Pinecone
-         Embeddings        Vector Database
-              │                 │
-              └────────┬────────┘
-                       │
-                       ▼
-                 Medical RAG
-                       │
-                       ▼
-                 Chat Response
+                       Internet
+                          │
+                          ▼
+                        Render
+                          │
+                          ▼
+                      Gunicorn
+                          │
+                          ▼
+                        Flask
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+              ▼                       ▼
+     Hugging Face Embeddings       Pinecone
+              │                  Vector Database
+              │                       │
+              └───────────┬───────────┘
+                          │
+                          ▼
+                     Retrieved
+                      Context
+                          │
+                          ▼
+                       Groq LLM
+                          │
+                          ▼
+                    Chat Response
 ```
 
 ---
