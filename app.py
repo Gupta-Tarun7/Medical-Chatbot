@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
@@ -19,12 +20,11 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from src.prompt import system_prompt
 
-import traceback
-
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 app = Flask(__name__)
 
@@ -45,11 +45,14 @@ retriever = docsearch.as_retriever(
     }
 )
 
+
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
     temperature=0.2,
-    max_tokens=1024
+    max_tokens=1024,
+    groq_api_key=GROQ_API_KEY
 )
+
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -57,6 +60,7 @@ prompt = ChatPromptTemplate.from_messages(
         ("human", "{input}")
     ]
 )
+
 
 question_answer_chain = create_stuff_documents_chain(
     llm,
@@ -68,10 +72,11 @@ rag_chain = create_retrieval_chain(
     question_answer_chain
 )
 
+
 @app.route("/")
 def index():
-    return render_template("chat.html")
 
+    return render_template("chat.html")
 
 @app.route("/get", methods=["POST"])
 def chat():
@@ -79,6 +84,7 @@ def chat():
     msg = request.form.get("msg", "").strip()
 
     if not msg:
+
         return "Please enter a question.", 400
 
     try:
@@ -93,28 +99,30 @@ def chat():
             }
         )
 
-        print("\nRETRIEVED ANSWER:")
-        print(response.get("answer"))
-
-        print("\n========================================")
-
         answer = response.get(
             "answer",
             "Sorry, I could not generate an answer."
         )
 
+        print("\nRETRIEVED ANSWER:")
+        print(answer)
+
+        print("========================================\n")
+
         return answer
 
     except Exception as e:
 
-        import traceback
-
         print("\n========== ERROR ==========")
+
         traceback.print_exc()
+
         print("===========================\n")
 
-        return "Sorry, I was unable to generate a response.", 500
-
+        return (
+            "Sorry, I was unable to generate a response. "
+            "Please try again later."
+        ), 500
 
 if __name__ == "__main__":
 

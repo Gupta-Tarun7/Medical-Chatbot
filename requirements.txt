@@ -12,6 +12,5 @@ langchain-text-splitters
 
 pinecone==7.3.0
 
-sentence-transformers
 huggingface-hub==1.24.0
 pypdf==6.14.2

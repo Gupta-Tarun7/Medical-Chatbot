@@ -1,7 +1,15 @@
+import os
+
+from dotenv import load_dotenv
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.embeddings import Embeddings
-from sentence_transformers import SentenceTransformer
+
+from huggingface_hub import InferenceClient
+
+load_dotenv()
+
 
 def load_pdf(data):
 
@@ -20,6 +28,7 @@ def filter_metadata(docs):
 
     return docs
 
+
 def text_split(docs):
 
     splitter = RecursiveCharacterTextSplitter(
@@ -29,51 +38,70 @@ def text_split(docs):
 
     return splitter.split_documents(docs)
 
-class LocalEmbeddings(Embeddings):
+class HuggingFaceEmbeddingsAPI(Embeddings):
 
     def __init__(
         self,
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     ):
+
         self.model_name = model_name
-        self.model = None
 
-    def _load_model(self):
+        token = os.getenv("HF_TOKEN")
 
-        if self.model is None:
+        if not token:
 
-            print("Loading embedding model...")
-
-            self.model = SentenceTransformer(
-                self.model_name
+            raise ValueError(
+                "HF_TOKEN environment variable is not set."
             )
 
-            print("Embedding model loaded.")
+        self.client = InferenceClient(
+            provider="hf-inference",
+            api_key=token
+        )
 
     def embed_documents(self, texts):
 
-        self._load_model()
+        embeddings = []
 
-        embeddings = self.model.encode(
-            texts,
-            normalize_embeddings=True
-        )
+        for text in texts:
 
-        return embeddings.tolist()
+            result = self.client.feature_extraction(
+                text,
+                model=self.model_name
+            )
+
+            if hasattr(result, "tolist"):
+
+                result = result.tolist()
+
+            if isinstance(result[0], list):
+
+                result = result[0]
+
+            embeddings.append(result)
+
+        return embeddings
 
     def embed_query(self, text):
 
-        self._load_model()
-
-        embedding = self.model.encode(
+        result = self.client.feature_extraction(
             text,
-            normalize_embeddings=True
+            model=self.model_name
         )
 
-        return embedding.tolist()
+        if hasattr(result, "tolist"):
+
+            result = result.tolist()
+
+        if isinstance(result[0], list):
+
+            result = result[0]
+
+        return result
 
 def download_embeddings():
 
-    return LocalEmbeddings(
+    return HuggingFaceEmbeddingsAPI(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
