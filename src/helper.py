@@ -1,14 +1,7 @@
-import os
-
-from dotenv import load_dotenv
-
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.embeddings import Embeddings
-
 from sentence_transformers import SentenceTransformer
-
-load_dotenv()
 
 def load_pdf(data):
 
@@ -44,13 +37,23 @@ class LocalEmbeddings(Embeddings):
     ):
 
         self.model_name = model_name
+        self.model = None
 
-        self.model = SentenceTransformer(
-            model_name
-        )
+    def _load_model(self):
 
+        if self.model is None:
+
+            print("Loading embedding model...")
+
+            self.model = SentenceTransformer(
+                self.model_name
+            )
+
+            print("Embedding model loaded.")
 
     def embed_documents(self, texts):
+
+        self._load_model()
 
         embeddings = self.model.encode(
             texts,
@@ -59,8 +62,9 @@ class LocalEmbeddings(Embeddings):
 
         return embeddings.tolist()
 
-
     def embed_query(self, text):
+
+        self._load_model()
 
         embedding = self.model.encode(
             text,
