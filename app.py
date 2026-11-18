@@ -24,7 +24,6 @@ load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-HF_TOKEN = os.getenv("HF_TOKEN")
 
 app = Flask(__name__)
 
@@ -37,14 +36,12 @@ docsearch = PineconeVectorStore.from_existing_index(
     embedding=embeddings
 )
 
-
 retriever = docsearch.as_retriever(
     search_type="similarity",
     search_kwargs={
         "k": 3
     }
 )
-
 
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
@@ -53,14 +50,12 @@ llm = ChatGroq(
     groq_api_key=GROQ_API_KEY
 )
 
-
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system_prompt),
         ("human", "{input}")
     ]
 )
-
 
 question_answer_chain = create_stuff_documents_chain(
     llm,
@@ -75,29 +70,22 @@ rag_chain = create_retrieval_chain(
 
 @app.route("/")
 def index():
-
     return render_template("chat.html")
+
 
 @app.route("/get", methods=["POST"])
 def chat():
-
     msg = request.form.get("msg", "").strip()
 
     if not msg:
-
         return "Please enter a question.", 400
 
     try:
-
         print("\n========================================")
         print("USER QUESTION:")
         print(msg)
 
-        response = rag_chain.invoke(
-            {
-                "input": msg
-            }
-        )
+        response = rag_chain.invoke({"input": msg})
 
         answer = response.get(
             "answer",
@@ -106,17 +94,13 @@ def chat():
 
         print("\nRETRIEVED ANSWER:")
         print(answer)
-
         print("========================================\n")
 
         return answer
 
-    except Exception as e:
-
+    except Exception:
         print("\n========== ERROR ==========")
-
         traceback.print_exc()
-
         print("===========================\n")
 
         return (
@@ -124,8 +108,8 @@ def chat():
             "Please try again later."
         ), 500
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8080)),

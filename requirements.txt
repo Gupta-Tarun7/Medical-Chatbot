@@ -12,5 +12,5 @@ langchain-text-splitters
 
 pinecone==7.3.0
 
-huggingface-hub==1.24.0
+fastembed==0.9.1
 pypdf==6.14.2

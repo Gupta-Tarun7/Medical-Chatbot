@@ -1,6 +1,6 @@
 # 🩺 Medical Chatbot using LangChain, Flask, Groq & Pinecone
 
-A Retrieval-Augmented Generation (RAG) based Medical Chatbot built using **LangChain**, **Flask**, **Groq**, **Pinecone**, and **Hugging Face embeddings**.
+A Retrieval-Augmented Generation (RAG) based Medical Chatbot built using **LangChain**, **Flask**, **Groq**, **Pinecone**, and **FastEmbed** (local `all-MiniLM-L6-v2` embeddings).
 
 The chatbot retrieves relevant information from medical documents stored in a Pinecone vector database and uses a Groq-hosted language model to generate responses based on the retrieved context.
 
@@ -15,7 +15,7 @@ The chatbot retrieves relevant information from medical documents stored in a Pi
 * 📚 PDF document-based knowledge retrieval
 * 🧠 LangChain integration
 * 🌲 Pinecone vector database
-* 🤗 Hugging Face `all-MiniLM-L6-v2` embeddings
+* 🧬 Local `all-MiniLM-L6-v2` embeddings via FastEmbed (ONNX, no paid embedding API)
 * ⚡ Groq LLM inference
 * 💬 Interactive chat interface
 * 🌙 Dark mode
@@ -41,7 +41,7 @@ The chatbot retrieves relevant information from medical documents stored in a Pi
 * LangChain
 * Groq
 * `openai/gpt-oss-20b`
-* Hugging Face Sentence Transformers
+* FastEmbed (ONNX runtime)
 * `sentence-transformers/all-MiniLM-L6-v2`
 * Pinecone
 * Retrieval-Augmented Generation
@@ -107,7 +107,7 @@ The chatbot uses a Retrieval-Augmented Generation pipeline.
                    Flask Web App
                           │
                           ▼
-                 Query Embedding
+        Local Query Embedding (FastEmbed, MiniLM)
                           │
                           ▼
                  Pinecone Search
@@ -130,7 +130,7 @@ The chatbot uses a Retrieval-Augmented Generation pipeline.
 
 The application separates **knowledge retrieval** from **answer generation**:
 
-* Hugging Face `all-MiniLM-L6-v2` converts text and questions into 384-dimensional embeddings.
+* `all-MiniLM-L6-v2`, run locally through FastEmbed, converts text and questions into 384-dimensional embeddings.
 * Pinecone stores and searches those vectors.
 * Groq processes the retrieved medical context and generates the final response.
 
@@ -156,7 +156,7 @@ RecursiveCharacterTextSplitter
 Text Chunks
      │
      ▼
-Hugging Face Embeddings
+all-MiniLM-L6-v2 Embeddings
      │
      ▼
 384-Dimensional Vectors
@@ -171,7 +171,7 @@ When a user asks a question:
 User Question
       │
       ▼
-all-MiniLM-L6-v2
+all-MiniLM-L6-v2 (local, FastEmbed)
       │
       ▼
 Query Vector
@@ -239,7 +239,6 @@ Create a `.env` file in the root directory:
 ```env
 PINECONE_API_KEY=your_pinecone_api_key
 GROQ_API_KEY=your_groq_api_key
-HF_TOKEN=your_huggingface_token
 ```
 
 ### Why are these keys required?
@@ -248,7 +247,8 @@ HF_TOKEN=your_huggingface_token
 | ------------------ | ------------------------------------------ |
 | `PINECONE_API_KEY` | Connects to Pinecone vector database       |
 | `GROQ_API_KEY`     | Allows the application to use the Groq LLM |
-| `HF_TOKEN`         | Used for Hugging Face embedding inference  |
+
+> ℹ️ `HF_TOKEN` is **no longer required**. Embeddings are generated locally, so no Hugging Face Inference API call is made. You may optionally set a free `HF_TOKEN` to get faster first-time model downloads and silence the "unauthenticated requests" warning.
 
 Your project should look like:
 
@@ -280,9 +280,9 @@ __pycache__/
 
 # 🌲 Create Pinecone Vector Index
 
-Before running the chatbot, create the Pinecone vector index and upload the medical document embeddings.
+Before running the chatbot, the Pinecone index must be populated with the medical document embeddings.
 
-Run:
+Run **once**:
 
 ```bash
 python store_index.py
@@ -301,6 +301,7 @@ The script will:
 The Pinecone index uses:
 
 ```text
+Index name: medical-chatbot
 Dimension: 384
 Metric: cosine
 Cloud: AWS
@@ -308,6 +309,8 @@ Region: us-east-1
 ```
 
 The dimension is `384` because `all-MiniLM-L6-v2` generates 384-dimensional embeddings.
+
+> ⚠️ **Do not run `store_index.py` again on an index that is already populated.** Each run adds the chunks again with new IDs, which creates duplicate records. If you need to rebuild, delete the index in the Pinecone console first.
 
 ---
 
@@ -327,6 +330,8 @@ http://127.0.0.1:8080
 
 Open the URL in your browser.
 
+> ⏳ **First run:** FastEmbed downloads the embedding model (about 90 MB), so startup can take 30 seconds to 2 minutes. Later runs start in a few seconds because the model is cached.
+
 ---
 
 # 🤖 Groq LLM
@@ -339,7 +344,8 @@ The current model configured in `app.py` is:
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
     temperature=0.2,
-    max_tokens=256
+    max_tokens=1024,
+    groq_api_key=GROQ_API_KEY
 )
 ```
 
@@ -355,7 +361,7 @@ The project uses:
 sentence-transformers/all-MiniLM-L6-v2
 ```
 
-for generating embeddings.
+for generating embeddings, executed locally with **FastEmbed** (ONNX runtime, no PyTorch required).
 
 The embedding size is:
 
@@ -363,12 +369,27 @@ The embedding size is:
 384 dimensions
 ```
 
+In `src/helper.py`:
+
+```python
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+
+def download_embeddings():
+    return FastEmbedEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+```
+
 These embeddings are used for both:
 
 * Medical document chunks
 * User queries
 
-Using the same embedding model for documents and queries ensures that they exist in the same vector space for similarity search.
+Using the same embedding model for documents and queries ensures that they exist in the same vector space for similarity search. **If you change the embedding model, you must re-create the Pinecone index and re-embed all documents.**
+
+### Why local embeddings?
+
+Earlier versions called the Hugging Face Inference API for every question. Once the account's free Inference Providers credits ran out, the API returned `402 Payment Required` and every chat request failed with a 500 error. Running the same model locally removes that dependency, costs nothing, and produces the same kind of vectors, so the existing Pinecone index keeps working without re-indexing.
 
 ---
 
@@ -386,7 +407,7 @@ When a user asks a question, the application follows this workflow:
                     User Question
                           │
                           ▼
-             all-MiniLM-L6-v2 Embedding
+         Local all-MiniLM-L6-v2 Embedding (FastEmbed)
                           │
                           ▼
                   Pinecone Search
@@ -434,7 +455,7 @@ What are the treatments for hypertension?
 ```
 
 ```text
-What are the symptoms of diabetes?
+What is jock itch?
 ```
 
 The chatbot answers using the information retrieved from the medical knowledge base.
@@ -448,7 +469,7 @@ For production deployment, the application uses **Gunicorn**.
 Run:
 
 ```bash
-gunicorn app:app
+gunicorn --workers 1 --threads 1 --timeout 120 --bind 0.0.0.0:$PORT app:app
 ```
 
 Here:
@@ -459,17 +480,13 @@ app.py
    └── app = Flask(__name__)
 ```
 
-Therefore:
-
-```bash
-gunicorn app:app
-```
-
-means:
+Therefore `app:app` means:
 
 ```text
 gunicorn <python_file>:<flask_application_variable>
 ```
+
+A single worker keeps memory usage low, and the 120-second timeout leaves room for the embedding model to load on startup.
 
 ---
 
@@ -529,7 +546,7 @@ pip install -r requirements.txt
 Use:
 
 ```bash
-gunicorn app:app
+gunicorn --workers 1 --threads 1 --timeout 120 --bind 0.0.0.0:$PORT app:app
 ```
 
 ---
@@ -541,7 +558,6 @@ Add the following environment variables in Render:
 ```text
 PINECONE_API_KEY
 GROQ_API_KEY
-HF_TOKEN
 ```
 
 For example:
@@ -549,7 +565,6 @@ For example:
 ```text
 PINECONE_API_KEY = your_pinecone_api_key
 GROQ_API_KEY     = your_groq_api_key
-HF_TOKEN         = your_huggingface_token
 ```
 
 ### ⚠️ Security
@@ -557,6 +572,10 @@ HF_TOKEN         = your_huggingface_token
 Do not put API keys directly inside Python files.
 
 Do not upload `.env` to GitHub.
+
+### ⏳ Startup note
+
+On each fresh start, the embedding model (about 90 MB) is downloaded before the app begins serving requests, so allow 1 to 2 minutes after a deploy or after the free-tier instance wakes from sleep. Watch the Render logs for `Listening at` to confirm the app is ready. FastEmbed uses ONNX instead of PyTorch to stay within small memory limits; if the worker is killed for running out of memory, upgrade to a larger Render instance.
 
 ---
 
@@ -577,8 +596,7 @@ LangChain Pinecone
 LangChain Groq
 
 Pinecone
-Hugging Face Hub
-Sentence Transformers
+FastEmbed
 
 PyPDF
 LangChain Text Splitters
@@ -618,7 +636,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Create the Pinecone vector index and upload document embeddings:
+Create the Pinecone vector index and upload document embeddings (only needed for a new, empty index):
 
 ```bash
 python store_index.py
@@ -635,6 +653,19 @@ For production-style local execution:
 ```bash
 gunicorn app:app
 ```
+
+---
+
+# 🛠️ Troubleshooting
+
+| Problem | Likely cause and fix |
+| ------- | -------------------- |
+| First startup is slow | The embedding model is being downloaded; it is cached afterwards |
+| `Vector dimension ... does not match the dimension of the index` | The embedding model does not match the model used to build the index. Use `all-MiniLM-L6-v2` (384 dims) with the `medical-chatbot` index |
+| Empty or irrelevant answers | The Pinecone index is empty or points to the wrong index name in `app.py` |
+| `ModuleNotFoundError: No module named 'src'` | Run commands from the project root folder |
+| Worker killed / out of memory on Render | Upgrade the instance size |
+| Chat returns "Sorry, I was unable to generate a response" | Check the server logs for the traceback; usually a missing or invalid `PINECONE_API_KEY` or `GROQ_API_KEY` |
 
 ---
 
@@ -686,7 +717,11 @@ Always consult a qualified healthcare professional for diagnosis, treatment, and
 
 ### Pinecone
 
-The Pinecone vector index must be populated before the chatbot can retrieve medical information.
+The Pinecone vector index must be populated before the chatbot can retrieve medical information. The index name used by `app.py` is:
+
+```text
+medical-chatbot
+```
 
 Run:
 
@@ -694,7 +729,7 @@ Run:
 python store_index.py
 ```
 
-when setting up a new Pinecone index or knowledge base.
+only when setting up a new, empty index or knowledge base.
 
 ### Groq
 
@@ -712,15 +747,9 @@ openai/gpt-oss-20b
 
 for response generation.
 
-### Hugging Face
+### Embeddings
 
-A valid Hugging Face token is required for the embedding service:
-
-```text
-HF_TOKEN
-```
-
-The embedding model is:
+Embeddings run locally with FastEmbed. No Hugging Face token or paid embedding API is needed. The embedding model is:
 
 ```text
 sentence-transformers/all-MiniLM-L6-v2
@@ -739,7 +768,7 @@ PINECONE_API_KEY
 For production deployment, use:
 
 ```bash
-gunicorn app:app
+gunicorn --workers 1 --threads 1 --timeout 120 --bind 0.0.0.0:$PORT app:app
 ```
 
 instead of:
@@ -767,8 +796,8 @@ python app.py
               ┌───────────┴───────────┐
               │                       │
               ▼                       ▼
-     Hugging Face Embeddings       Pinecone
-              │                  Vector Database
+     Local Query Embedding         Pinecone
+     (FastEmbed, MiniLM)        Vector Database
               │                       │
               └───────────┬───────────┘
                           │
